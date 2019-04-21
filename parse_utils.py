@@ -107,9 +107,9 @@ class ParseTable:
         else:
             if len(parts) != 2:
                 raise Exception("Un Expected Rule!!")
-            node1, key1 = parts[0].split(":")
+            node1, key1 = parts[0].rsplit(":", 1)
             tree.append(self.build_tree(node1, key1)[0])
-            node2, key2 = parts[1].split(":")
+            node2, key2 = parts[1].rsplit(":", 1)
             tree.append(self.build_tree(node2, key2)[0])
         return tree, probability
 
