@@ -8,10 +8,17 @@ from utils import base_category, stitch_files
 from tqdm import tqdm
 import time
 import os
+import sys
+import traceback
 
 
 def nap():
     time.sleep(1)
+
+
+def get_string(tree):
+    str_tree = str(tree).replace('\n', '')
+    return ' '.join(str_tree.split())
 
 
 def train():
@@ -22,20 +29,24 @@ def train():
 
 
 def parse_tree(parser, sent):
-    result_tree = parser.parse(sent['raw'])
-    tree = sent['parsed']
-    [base_category(subtrees) for subtrees in tree.subtrees()]
-    tree.chomsky_normal_form()
-    if result_tree is None:
-        # write not parsed to separate file
-        print(str(os.getpid()) + ": Unable to parse sent-" + str(sent[id]) + " from file " + sent['file'])
-    else:
-        with open(config.target_folder + "/result-" + str(os.getpid()) + ".txt", 'a+') as f:
-            f.write(str(result_tree[0]).replace('\n', ''))
-            f.flush()
-        with open(config.target_folder + "/gold-" + str(os.getpid()) + ".txt", 'a+') as f:
-            f.write(str(tree).replace('\n', ''))
-            f.flush()
+    try:
+        result_tree = parser.parse(sent['raw'])
+        tree = sent['parsed']
+        [base_category(subtrees) for subtrees in tree.subtrees()]
+        tree.chomsky_normal_form()
+        if result_tree is None:
+            # write not parsed to separate file
+            print(str(os.getpid()) + ": Unable to parse sent-" + str(sent[id]) + " from file " + sent['file'])
+        else:
+            with open(config.target_folder + "/result-" + str(os.getpid()) + ".txt", 'a+') as f:
+                f.write(get_string(result_tree[0]))
+                f.flush()
+            with open(config.target_folder + "/gold-" + str(os.getpid()) + ".txt", 'a+') as f:
+                f.write(get_string(tree))
+                f.flush()
+    except:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_tb(exc_traceback, limit=10, file=sys.stdout)
 
 
 def test(path):
