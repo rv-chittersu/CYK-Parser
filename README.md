@@ -103,5 +103,5 @@ python driver.py --mode test
 ./eval -p param results/gold.txt results/result.txt
 
 ```
-**Note** <result_dir> is should same as **target_folder** in **config.py**.
+**Note** result directory which contain gold and result parses can be found at **target_folder** in **config.py**.
 
