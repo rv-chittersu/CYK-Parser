@@ -1,24 +1,13 @@
 import argparse
-import config
-from parse_utils import CYKParser
+from parser import CYKParser
 from data_handler import DataHandler
 from concurrent.futures.process import ProcessPoolExecutor
 from concurrent.futures import as_completed
-from utils import base_category, stitch_files
+from utils import *
 from tqdm import tqdm
-import time
 import os
 import sys
 import traceback
-
-
-def nap():
-    time.sleep(1)
-
-
-def get_string(tree):
-    str_tree = str(tree).replace('\n', '')
-    return ' '.join(str_tree.split()) + '\n'
 
 
 def train():
@@ -52,7 +41,7 @@ def parse_tree(parser, sent, run_id):
 def test(path, run_id, runs):
     parser = CYKParser.load(path)
     data_handler = DataHandler(config.test_set, run_id, runs)
-    executor = ProcessPoolExecutor(4)
+    executor = ProcessPoolExecutor(config.processes)
     futures = [executor.submit(parse_tree, parser, sent, run_id) for sent in data_handler.generator()]
     kwargs = {
         'total': len(futures),

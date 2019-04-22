@@ -5,6 +5,16 @@ import nltk
 import random
 import config
 import glob
+import time
+
+
+def nap():
+    time.sleep(1)
+
+
+def get_string(tree):
+    str_tree = str(tree).replace('\n', '')
+    return ' '.join(str_tree.split()) + '\n'
 
 
 def is_num(word):

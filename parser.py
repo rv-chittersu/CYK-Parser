@@ -7,32 +7,32 @@ from concurrent.futures import wait
 
 class Rule:
     def __init__(self, head):
-        self.head = head
-        self.expansions = {}
+        self.lhs = head
+        self.rhs_dict = {}
         self.count = 0
 
-    def add_expansion(self, body):
-        if body in self.expansions:
-            self.expansions[body] += 1
+    def add_rhs(self, body):
+        if body in self.rhs_dict:
+            self.rhs_dict[body] += 1
         else:
-            self.expansions[body] = 1
+            self.rhs_dict[body] = 1
         self.count += 1
 
-    def set_expansion(self, body, score):
-        self.expansions[body] = score
+    def set_rhs(self, body, score):
+        self.rhs_dict[body] = score
 
     def normalize(self):
         if self.count == 0:
-            for key in self.expansions:
-                self.count += self.expansions[key]
-        for key in self.expansions:
-            self.expansions[key] = self.expansions[key]/self.count
+            for key in self.rhs_dict:
+                self.count += self.rhs_dict[key]
+        for key in self.rhs_dict:
+            self.rhs_dict[key] = self.rhs_dict[key] / self.count
         self.count = 1
 
     def __str__(self):
         str_list = []
-        for body, count in self.expansions.items():
-            str_list.append(self.head + " -> " + body + "," + str(count))
+        for body, count in self.rhs_dict.items():
+            str_list.append(self.lhs + " -> " + body + "," + str(count))
         return "\n".join(str_list)
 
 
@@ -42,29 +42,33 @@ class ParseTable:
         self.sentence = sentence
         self.table = dict()
 
+    @staticmethod
+    def get_key(start, end):
+        return str(start) + "-" + str(end)
+
     # should add rule if it's valid
     def populate(self, start, end, productions: Rule):
-        non_term = productions.head
+        non_term = productions.lhs
         length = end - start
-        for expansion, probability in productions.expansions.items():
+        for rhs, probability in productions.rhs_dict.items():
             if length == 1:
-                if expansion == self.sentence[start]:
-                    self.update_prob(start, end, non_term, expansion, probability)
+                if rhs == self.sentence[start]:
+                    self.update_prob(start, end, non_term, rhs, probability)
             else:
-                if len(expansion.split(" ")) == 1:
+                if len(rhs.split(" ")) == 1:
                     continue
-                k1, k2 = expansion.split(" ")
+                k1, k2 = rhs.split(" ")
                 for mid in range(start + 1, end):
                     prob_k1 = self.get_prob(start, mid, k1)
                     prob_k2 = self.get_prob(mid, end, k2)
                     if prob_k1 > 0 and prob_k2 > 0:
                         prob = prob_k1*prob_k2*probability
-                        k1 += ":" + str(start) + "-" + str(mid)
-                        k2 += ":" + str(mid) + "-" + str(end)
+                        k1 += ":" + self.get_key(start, mid)
+                        k2 += ":" + self.get_key(mid, end)
                         self.update_prob(start, end, non_term, k1 + " " + k2, prob)
 
     def get_prob(self, start, end, non_term):
-        partition_key = str(start) + "-" + str(end)
+        partition_key = self.get_key(start, end)
         if partition_key not in self.table:
             return -1
         non_term_dict = self.table[partition_key]
@@ -72,14 +76,14 @@ class ParseTable:
             return -1
         return non_term_dict[non_term][1]
 
-    def update_prob(self, start, end, non_term, expansion, prob):
-        partition_key = str(start) + "-" + str(end)
+    def update_prob(self, start, end, non_term, rhs, prob):
+        partition_key = self.get_key(start, end)
         if prob < self.get_prob(start, end, non_term):
             return
         if partition_key not in self.table:
             self.table[partition_key] = {}
         non_term_dict = self.table[partition_key]
-        non_term_dict[non_term] = [expansion, prob]
+        non_term_dict[non_term] = [rhs, prob]
 
     def get_entry(self, partition_key, non_term):
         if partition_key not in self.table:
@@ -132,7 +136,7 @@ class CYKParser:
                 count = int(body_part.split(",")[-1:][0])
                 if head not in model.rules:
                     model.rules[head] = Rule(head)
-                model.rules[head].set_expansion(body, count)
+                model.rules[head].set_rhs(body, count)
         model.normalize()
         model.initialize_priors()
         return model
@@ -147,12 +151,11 @@ class CYKParser:
                 head, body = parse_production(production)
                 self.update_counts(head, body)
         print("Finished Processing Data")
-        # self.normalize()
 
     def update_counts(self, head, body):
         if head not in self.rules:
             self.rules[head] = Rule(head)
-        self.rules[head].add_expansion(body)
+        self.rules[head].add_rhs(body)
 
     def normalize(self):
         for key in self.rules:
@@ -168,46 +171,43 @@ class CYKParser:
         nt_dict = dict()
         count = 0
         for rule in self.rules:
-            for expansion in self.rules[rule].expansions:
-                if len(expansion.split(" ")) != 1:
+            for rhs in self.rules[rule].rhs_dict:
+                if len(rhs.split(" ")) != 1:
                     continue
-                if expansion in self.rules:
+                if rhs in self.rules:
                     continue
                 if rule in nt_dict:
-                    nt_dict[rule] += self.rules[rule].expansions[expansion]
+                    nt_dict[rule] += self.rules[rule].rhs_dict[rhs]
                 else:
-                    nt_dict[rule] = self.rules[rule].expansions[expansion]
-                count += self.rules[rule].expansions[expansion]
+                    nt_dict[rule] = self.rules[rule].rhs_dict[rhs]
+                count += self.rules[rule].rhs_dict[rhs]
         for key in nt_dict:
             nt_dict[key] /= count
         self.priors = nt_dict
 
-    def handle_init(self, start, parse_table: ParseTable):
+    def parse_terminals(self, start, parse_table: ParseTable):
         word = parse_table.sentence[start]
         nt_dict = dict()
-        # nt_dict[parse_table.sentence[start]] = [parse_table.sentence[start], 1]
         i = 0
         while True:
             i += 1
             updated = False
             for rule in self.rules:
-                for expansion in self.rules[rule].expansions:
+                for rhs in self.rules[rule].rhs_dict:
 
                     # We have added this rule
-                    if rule in nt_dict and (nt_dict[rule][0] == expansion or nt_dict[rule][0] == word):
+                    if rule in nt_dict and (nt_dict[rule][0] == rhs or nt_dict[rule][0] == word):
                         continue
 
-                    if is_valid(expansion, word):
-                        nt_dict[rule] = [word, self.rules[rule].expansions[expansion]]
+                    if is_valid(rhs, word):
+                        nt_dict[rule] = [word, self.rules[rule].rhs_dict[rhs]]
                         updated = True
-                        # print("iter: " + str(i) + " " + rule + " -> " + expansion)
-                    if expansion in nt_dict.keys():
-                        new_prob = nt_dict[expansion][1] * self.rules[rule].expansions[expansion]
+                    if rhs in nt_dict.keys():
+                        new_prob = nt_dict[rhs][1] * self.rules[rule].rhs_dict[rhs]
                         if rule in nt_dict and nt_dict[rule][1] > new_prob:
                             continue
-                        nt_dict[rule] = [expansion, new_prob]
+                        nt_dict[rule] = [rhs, new_prob]
                         updated = True
-                        # print("iter: " + str(i) + " " + rule + " -> " + expansion)
                         break
             if not updated:
                 if i == 1:
@@ -220,7 +220,7 @@ class CYKParser:
 
     def parse_sub_str(self, substring_len, start_index, parse_table):
         if substring_len == 1:
-            self.handle_init(start_index, parse_table)
+            self.parse_terminals(start_index, parse_table)
             return
         for rule in self.rules:
             parse_table.populate(start_index, start_index + substring_len, self.rules[rule])
@@ -233,7 +233,6 @@ class CYKParser:
             start_indices = range(sentence_len + 1 - substring_len)
             futures = [executor.submit(self.parse_sub_str, substring_len, i, parse_table) for i in start_indices]
             wait(futures)
-            # print(substring_len)
         init_key = "0-"+str(sentence_len)
         if init_key not in parse_table.table:
             print("Cannot parse")
