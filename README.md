@@ -34,10 +34,13 @@ test_set = 'data/test.txt'
 model_path = 'ckpt/model.pt'
 
 # folders to store gold and generated probabilities
-target_folder = 'target'
+target_folder = 'results'
 
 # number of processes to spawn during test time
 processes = 4
+
+# smoothing type prob/add_one
+smoothing = 'prob'
 ```
 
 make sure *config.py* has right values set before running the program
