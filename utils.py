@@ -5,7 +5,6 @@ import nltk
 import random
 import config
 import glob
-import os
 
 
 def is_num(word):
@@ -57,6 +56,7 @@ def base_category(t):
 
 
 def stitch_files():
+    print("Stitching files")
     gold_list = sorted(glob.glob(config.target_folder + "/gold*"))
     result_list = sorted(glob.glob(config.target_folder + "/result*"))
 

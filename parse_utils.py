@@ -236,5 +236,11 @@ class CYKParser:
             # print(substring_len)
         init_key = "0-"+str(sentence_len)
         if init_key not in parse_table.table:
+            print("Cannot parse")
             return None
+        if "S" not in parse_table.table[init_key]:
+            print("Cannot build tree with S as node. Giving other optimal result")
+            nt_with_prob = {nt: parse_table.get_entry(init_key, nt)[1] for nt in parse_table.table[init_key]}
+            best_nt = max(nt_with_prob, key=nt_with_prob.get)
+            return parse_table.build_tree(best_nt, init_key)
         return parse_table.build_tree("S", init_key)

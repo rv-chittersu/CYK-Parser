@@ -18,7 +18,7 @@ def nap():
 
 def get_string(tree):
     str_tree = str(tree).replace('\n', '')
-    return ' '.join(str_tree.split())
+    return ' '.join(str_tree.split()) + '\n'
 
 
 def train():
@@ -65,6 +65,8 @@ def test(path, run_id, runs):
     for future in futures:
         if future.exception() is not None:
             print(future.exception())
+    if runs == 1:
+        stitch_files()
     print("Done parsing")
 
 
@@ -74,6 +76,7 @@ if __name__ == "__main__":
     parser.add_argument('--model', dest='model_path', default=config.model_path, help='model path')
     parser.add_argument('--runs', dest='runs', default=1, type=int, help='number of runs for parallel testing')
     parser.add_argument('--run_id', dest='run_id', default=1, type=int, help='run id')
+    parser.add_argument('--sent', dest='sent', help='input sentence to parse')
 
     args = parser.parse_args()
     if args.mode == 'train':
@@ -82,3 +85,14 @@ if __name__ == "__main__":
         test(args.model_path, args.run_id, args.runs)
     elif args.mode == 'stitch':
         stitch_files()
+    elif args.mode == 'parse':
+        parser = CYKParser.load(args.model_path)
+        result = parser.parse(args.sent.split())
+        if result is None:
+            print("Cannot get a valid parse")
+        else:
+            print("Found a parse with probability - " + str(result[1]) + '\n')
+            print("Constituency parsing..")
+            print(result[0], '\n')
+            result[0].pretty_print()
+
