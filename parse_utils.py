@@ -139,7 +139,7 @@ class CYKParser:
 
     def train(self, data_handler: DataHandler):
         for sentence in data_handler.generator():
-            tree: Tree = sentence['parsed']
+            tree = sentence['parsed']
             [base_category(subtrees) for subtrees in tree.subtrees()]
             tree.chomsky_normal_form()
             productions = tree.productions()

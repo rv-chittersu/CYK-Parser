@@ -28,7 +28,7 @@ def train():
     parser.save(config.model_path)
 
 
-def parse_tree(parser, sent):
+def parse_tree(parser, sent, run_id):
     try:
         result_tree = parser.parse(sent['raw'])
         tree = sent['parsed']
@@ -38,10 +38,10 @@ def parse_tree(parser, sent):
             # write not parsed to separate file
             print(str(os.getpid()) + ": Unable to parse sent-" + str(sent[id]) + " from file " + sent['file'])
         else:
-            with open(config.target_folder + "/result-" + str(os.getpid()) + ".txt", 'a+') as f:
+            with open(config.target_folder + "/result-" + str(run_id) + "-" + str(os.getpid()) + ".txt", 'a+') as f:
                 f.write(get_string(result_tree[0]))
                 f.flush()
-            with open(config.target_folder + "/gold-" + str(os.getpid()) + ".txt", 'a+') as f:
+            with open(config.target_folder + "/gold-" + str(run_id) + "-" + str(os.getpid()) + ".txt", 'a+') as f:
                 f.write(get_string(tree))
                 f.flush()
     except:
@@ -49,11 +49,11 @@ def parse_tree(parser, sent):
         traceback.print_tb(exc_traceback, limit=10, file=sys.stdout)
 
 
-def test(path):
+def test(path, run_id, runs):
     parser = CYKParser.load(path)
-    data_handler = DataHandler(config.test_set)
+    data_handler = DataHandler(config.test_set, run_id, runs)
     executor = ProcessPoolExecutor(4)
-    futures = [executor.submit(parse_tree, parser, sent) for sent in data_handler.generator()]
+    futures = [executor.submit(parse_tree, parser, sent, run_id) for sent in data_handler.generator()]
     kwargs = {
         'total': len(futures),
         'unit': 'nap',
@@ -66,15 +66,19 @@ def test(path):
         if future.exception() is not None:
             print(future.exception())
     print("Done parsing")
-    stitch_files()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', dest='mode', default='train', help='train or test', required=True)
     parser.add_argument('--model', dest='model_path', default=config.model_path, help='model path')
+    parser.add_argument('--runs', dest='runs', default=1, type=int, help='number of runs for parallel testing')
+    parser.add_argument('--run_id', dest='run_id', default=1, type=int, help='run id')
+
     args = parser.parse_args()
     if args.mode == 'train':
         train()
     elif args.mode == 'test':
-        test(args.model_path)
+        test(args.model_path, args.run_id, args.runs)
+    elif args.mode == 'stitch':
+        stitch_files()

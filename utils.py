@@ -75,6 +75,3 @@ def stitch_files():
         f.write("\n".join(gold))
     with open(config.target_folder + '/result.txt', 'w') as f:
         f.write("\n".join(result))
-
-    map(os.remove, gold_list)
-    map(os.remove, result_list)
