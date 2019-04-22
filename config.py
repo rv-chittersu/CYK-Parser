@@ -11,3 +11,5 @@ target_folder = 'results'
 # number of processes to spawn during test time
 processes = 4
 
+# smoothing type prob/add_one
+smoothing = 'prob'

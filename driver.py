@@ -7,6 +7,7 @@ from concurrent.futures import as_completed
 from utils import *
 from tqdm import tqdm
 import os
+import traceback
 
 
 def train():
@@ -18,23 +19,27 @@ def train():
 
 def parse_tree(parser, sent, run_id):
     # get result tree and gold tree
-    result_tree = parser.parse(sent['raw'])
+    try:
+        result_tree = parser.parse(sent['raw'])
 
-    gold_tree = sent['parsed']
-    [base_category(subtrees) for subtrees in gold_tree.subtrees()]
-    gold_tree.chomsky_normal_form()
+        gold_tree = sent['parsed']
+        [base_category(subtrees) for subtrees in gold_tree.subtrees()]
+        gold_tree.chomsky_normal_form()
 
-    if result_tree is None:
-        # write not parsed to separate file
-        print(str(os.getpid()) + ": Unable to parse sent-" + str(sent[id]) + " from file " + sent['file'])
-    else:
-        # write to files
-        with open(config.target_folder + "/result-" + str(run_id) + "-" + str(os.getpid()) + ".txt", 'a+') as f:
-            f.write(get_string(result_tree[0]))
-            f.flush()
-        with open(config.target_folder + "/gold-" + str(run_id) + "-" + str(os.getpid()) + ".txt", 'a+') as f:
-            f.write(get_string(gold_tree))
-            f.flush()
+        if result_tree is None:
+            # write not parsed to separate file
+            print(str(os.getpid()) + ": Unable to parse sent-" + str(sent[id]) + " from file " + sent['file'])
+        else:
+            # write to files
+            with open(config.target_folder + "/result-" + str(run_id) + "-" + str(os.getpid()) + ".txt", 'a+') as f:
+                f.write(get_string(result_tree[0]))
+                f.flush()
+            with open(config.target_folder + "/gold-" + str(run_id) + "-" + str(os.getpid()) + ".txt", 'a+') as f:
+                f.write(get_string(gold_tree))
+                f.flush()
+    except Exception as e:
+        traceback.print_exc()
+        print(e)
 
 
 def test(path, run_id, runs):

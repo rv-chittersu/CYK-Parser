@@ -22,13 +22,25 @@ class Rule:
     def set_rhs(self, body, score):
         self.rhs_dict[body] = score
 
-    def normalize(self):
+    def update_count(self):
         if self.count == 0:
             for key in self.rhs_dict:
                 self.count += self.rhs_dict[key]
+
+    def normalize(self):
+        self.update_count()
         for key in self.rhs_dict:
             self.rhs_dict[key] = self.rhs_dict[key] / self.count
-        self.count = 1
+
+    def has_terminal_rhs(self, non_terminals):
+        self.update_count()
+        for key in self.rhs_dict:
+            if len(key.split()) != 1:
+                continue
+            if key in non_terminals:
+                continue
+            return True
+        return False
 
     def __str__(self):
         str_list = []
@@ -154,7 +166,10 @@ class CYKParser:
                     model.rules[head] = Rule(head)
                 model.rules[head].set_rhs(body, count)
         model.normalize()
-        model.initialize_priors()
+        if config.smoothing == 'prob':
+            model.do_prob_init()
+        elif config.smoothing == 'add_one':
+            model.do_add_one()
         return model
 
     # calculate production occurrences
@@ -187,7 +202,7 @@ class CYKParser:
                 file.write("\n")
 
     # initialize prob of non terminal generating token
-    def initialize_priors(self):
+    def do_prob_init(self):
         nt_dict = dict()
         count = 0
         for rule in self.rules:
@@ -203,6 +218,13 @@ class CYKParser:
                 count += self.rules[rule].rhs_dict[rhs]
         for key in nt_dict:
             nt_dict[key] /= count
+        self.priors = nt_dict
+
+    def do_add_one(self):
+        nt_dict = dict()
+        for rule in self.rules:
+            if self.rules[rule].has_terminal_rhs(self.rules.keys()):
+                nt_dict[rule] = 1/self.rules[rule].count
         self.priors = nt_dict
 
     # special case of parse sub_str where str_len is 1.
