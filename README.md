@@ -1,5 +1,5 @@
 # word2vec skipgram model
-This work is done as part of [assignment](https://sites.google.com/site/2019e1246/schedule/assignment-3) for [E1 246: Natural Language Understanding (2019)](https://sites.google.com/site/2019e1246/basics). The report for the same can be found [here](https://github.com/rv-chittersu/word2vec/blob/master/report.pdf)
+This work is done as part of [assignment](https://sites.google.com/site/2019e1246/schedule/assignment-3) for [E1 246: Natural Language Understanding (2019)](https://sites.google.com/site/2019e1246/basics). The report for the same can be found [here](https://github.com/rv-chittersu/CYK-Parser/blob/master/report.pdf)
 
 ## Data
 NLTK's treebank dataset is used to train the generate PCFG.
@@ -66,10 +66,10 @@ Saves checkpoint which contains production rules and counts
 
 ### Code
 
-**data_handler.py** responsible for reading training or test file mentioned in config and generating sentences
-**parser.py** has core implementation of CYKParser
-**utils.py** has methods used by other files
-**driver.py** contains main
+**data_handler.py** responsible for reading training or test file mentioned in config and generating sentences<br>
+**parser.py** has core implementation of CYKParser<br>
+**utils.py** has methods used by other files<br>
+**driver.py** contains main<br>
 
 ## How to Run
 
@@ -103,5 +103,5 @@ python driver.py --mode test
 ./eval -p param results/gold.txt results/result.txt
 
 ```
-**Note** <result_dir> is should same as **target_folder** in **config.py**.
+**Note** result directory which contain gold and result parses can be found at **target_folder** in **config.py**.
 
