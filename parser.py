@@ -5,6 +5,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from concurrent.futures import wait
 
 
+# has mapping to lhs -> rhs, count
 class Rule:
     def __init__(self, head):
         self.lhs = head
@@ -36,10 +37,15 @@ class Rule:
         return "\n".join(str_list)
 
 
+# data structure for CYK Parse Table
 class ParseTable:
 
     def __init__(self, sentence):
+        # sentence to parse as list of strings
         self.sentence = sentence
+
+        # keys start_pos-end_pos
+        # values dictionary (lhs : rhs, prob)
         self.table = dict()
 
     @staticmethod
@@ -67,6 +73,7 @@ class ParseTable:
                         k2 += ":" + self.get_key(mid, end)
                         self.update_prob(start, end, non_term, k1 + " " + k2, prob)
 
+    # gives probability of non terminal entry in the table cell
     def get_prob(self, start, end, non_term):
         partition_key = self.get_key(start, end)
         if partition_key not in self.table:
@@ -76,6 +83,7 @@ class ParseTable:
             return -1
         return non_term_dict[non_term][1]
 
+    # updates entry in the table cell
     def update_prob(self, start, end, non_term, rhs, prob):
         partition_key = self.get_key(start, end)
         if prob < self.get_prob(start, end, non_term):
@@ -85,6 +93,7 @@ class ParseTable:
         non_term_dict = self.table[partition_key]
         non_term_dict[non_term] = [rhs, prob]
 
+    # get the entry by non terminal in the table
     def get_entry(self, partition_key, non_term):
         if partition_key not in self.table:
             raise Exception("Un Expected Partition Key " + partition_key)
@@ -92,6 +101,7 @@ class ParseTable:
             return None
         return self.table[partition_key][non_term]
 
+    # build tree from generated table
     def build_tree(self, node, partition_key):
         start, end = [int(x) for x in partition_key.split("-")]
         sentence_len = end - start
@@ -121,9 +131,15 @@ class ParseTable:
 class CYKParser:
 
     def __init__(self):
+        # key: lhs
+        # value: Rule
         self.rules = {}
+
+        # priors are generated when parsing
+        # useful when token is OOV
         self.priors = None
 
+    # load saved model
     @staticmethod
     def load(path):
         model = CYKParser()
@@ -141,6 +157,7 @@ class CYKParser:
         model.initialize_priors()
         return model
 
+    # calculate production occurrences
     def train(self, data_handler: DataHandler):
         for sentence in data_handler.generator():
             tree = sentence['parsed']
@@ -157,16 +174,19 @@ class CYKParser:
             self.rules[head] = Rule(head)
         self.rules[head].add_rhs(body)
 
+    # normalize counts to get probability
     def normalize(self):
         for key in self.rules:
             self.rules[key].normalize()
 
+    # save model
     def save(self, path):
         with open(path, 'w') as file:
             for head in self.rules:
                 file.write(str(self.rules[head]))
                 file.write("\n")
 
+    # initialize prob of non terminal generating token
     def initialize_priors(self):
         nt_dict = dict()
         count = 0
@@ -185,6 +205,7 @@ class CYKParser:
             nt_dict[key] /= count
         self.priors = nt_dict
 
+    # special case of parse sub_str where str_len is 1.
     def parse_terminals(self, start, parse_table: ParseTable):
         word = parse_table.sentence[start]
         nt_dict = dict()
@@ -199,6 +220,7 @@ class CYKParser:
                     if rule in nt_dict and (nt_dict[rule][0] == rhs or nt_dict[rule][0] == word):
                         continue
 
+                    # is_valid takes care of case and numerical tokens
                     if is_valid(rhs, word):
                         nt_dict[rule] = [word, self.rules[rule].rhs_dict[rhs]]
                         updated = True
@@ -211,7 +233,7 @@ class CYKParser:
                         break
             if not updated:
                 if i == 1:
-                    # first iteration!!
+                    # first iteration!!. The token is OOV. initialize with priors
                     for key, value in self.priors.items():
                         nt_dict[key] = [parse_table.sentence[start], value]
                 else:
@@ -233,7 +255,7 @@ class CYKParser:
             start_indices = range(sentence_len + 1 - substring_len)
             futures = [executor.submit(self.parse_sub_str, substring_len, i, parse_table) for i in start_indices]
             wait(futures)
-        init_key = "0-"+str(sentence_len)
+        init_key = parse_table.get_key(0, str(sentence_len))
         if init_key not in parse_table.table:
             print("Cannot parse")
             return None
