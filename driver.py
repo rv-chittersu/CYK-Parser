@@ -2,6 +2,7 @@ import argparse
 from parser import CYKParser
 from data_handler import DataHandler
 from concurrent.futures.process import ProcessPoolExecutor
+from nltk.tokenize import TreebankWordTokenizer
 from concurrent.futures import as_completed
 from utils import *
 from tqdm import tqdm
@@ -83,12 +84,14 @@ if __name__ == "__main__":
         stitch_files()
     elif args.mode == 'parse':
         parser = CYKParser.load(args.model_path)
-        result = parser.parse(args.sent.split())
+        sentence = TreebankWordTokenizer().tokenize(args.sent)
+        result = parser.parse(sentence)
         if result is None:
             print("Cannot get a valid parse")
         else:
             print("Found a parse with probability - " + str(result[1]) + '\n')
             print("Constituency parsing..")
             print(result[0], '\n')
+            result[0].draw()
             result[0].pretty_print()
 
