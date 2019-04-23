@@ -97,6 +97,5 @@ if __name__ == "__main__":
             print("Found a parse with probability - " + str(result[1]) + '\n')
             print("Constituency parsing..")
             print(result[0], '\n')
-            result[0].draw()
             result[0].pretty_print()
 
